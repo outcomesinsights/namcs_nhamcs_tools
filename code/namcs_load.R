@@ -24,20 +24,19 @@ get_filenames <- function(ftp_site) {
         .[, 5:9]
     close(con)
     names(f) <- c("size", "month", "day", "year", "filename")
-    saveRDS(f, paste0(namcs_dir, "download_specs.rds"))
     return(f)
 }
 
 # reads SAS input statements file to create fwf input specs
 read_sas_specs <- function(textdoc){
     z <- readLines(textdoc, encoding = "UTF-8") %>% # read in document, assuming UTF-8 which returns no errors. ASCII doesn't work.
-        .[grepl("^@", .)]  # pick lines starting with @
-    colstart <- str_extract(z, "^@\\d+") %>% 
+        .[grepl("^\\s*@", .)]  # pick lines starting with @
+    colstart <- str_extract(z, "@\\s*\\d+\\s+") %>% 
         gsub("@", "", .) %>% 
         as.numeric
     varname <- str_extract(z, "[A-Z]+\\d*\\S*") %>% # caps + maybe a number + maybe any non-whitespace char
         tolower
-    char <- str_detect(z, "\\$(CHAR)?\\d+")
+    char <- str_detect(z, "\\$(CHAR|char)?\\d+")
     num <- str_detect(z, "\\s+\\d+\\.\\d+\\s+") # spaces followed by number followed by . followed by number followed by spaces
     width <- str_extract(z, "\\d+\\.\\d*") %>% # number followed by . maybe followed by number
         gsub("\\.\\d*", "", .) %>% 
@@ -75,7 +74,7 @@ get_save_files <- function(file_list, dest_dir){
 }
 
 # set up directories
-namcs_dir <- "./data/raw/namcs/" # local directory on computer where data will be saved
+namcs_dir <- "./data/" # local directory on computer where data will be saved
 ftp_data <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NAMCS/" # data ftp site
 ftp_docs <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/dataset_documentation/namcs/sas/" # documentation ftp site
 
@@ -84,10 +83,12 @@ fdata <- get_filenames(ftp_data) # get data file names
 fdocs <- get_filenames(ftp_docs) # get sas input specs
 
 # extract relevant file names for downloading
+# NOTE that years have to be organized by row.  Not guaranteed by this code, though it seems to work because they are sorted alphabetically.
+# missing "." for col 121 in sas input statement for 1994; skipped above using "if-next"
+# saveRDS(file_list, paste0(namcs_dir, "download_specs.rds")) # saved working verison of file_list just in case
 datafiles <- grep("\\.(exe|EXE)$", fdata$filename, value = TRUE) # limit to those that are for data
-docfiles <- grep("^nam\\d\\dinp\\.txt", fdocs$filename, ignore.case = TRUE, value = TRUE)
-file_list <- data.frame(datafiles, docfiles) # limit to those that are for data.  NOTE that years have to be organized by row.  Not guaranteed by this code, though it seems to work because they are sorted alphabetically.
-file_list <- file_list[-13,] # missing "." for col 121 in sas input statement
+docfiles <- grep("^nam\\d\\dinp\\.txt", fdocs$filename, ignore.case = TRUE, value = TRUE) # limit to those that are for data.  
+file_list <- data.frame(datafiles, docfiles) 
 
 # run download
 get_save_files(file_list, namcs_dir)
