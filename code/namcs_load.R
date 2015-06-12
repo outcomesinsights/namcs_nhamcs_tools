@@ -28,8 +28,8 @@ get_filenames <- function(ftp_site) {
 }
 
 # reads SAS input statements file to create fwf input specs
-read_sas_specs <- function(textdoc){
-    z <- readLines(textdoc, encoding = "UTF-8") %>% # read in document, assuming UTF-8 which returns no errors. ASCII doesn't work.
+read_sas_specs <- function(textdoc, ...){
+    z <- readLines(textdoc, ...) %>% # allows for encoding or other arguments to readLines
         .[grepl("^\\s*@", .)]  # pick lines starting with @
     colstart <- str_extract(z, "@\\s*\\d+\\s+") %>% 
         gsub("@", "", .) %>% 
@@ -51,7 +51,8 @@ read_sas_specs <- function(textdoc){
 
 # download file and specs, and read the fwf, and save it as an rds file
 # requires a file list with 2 columns, one for the filenames of the data files, and one for the filenames for the documnetation files (sas input)
-get_save_files <- function(file_list, dest_dir){
+# uses readr read_fwf to load data and uses on character per column for setting column classes
+get_save_files <- function(file_list, dest_dir, ...){
     check_dir(dest_dir) # checks directory and makes it if it doesn't exist
     temp_data <- tempfile() # create tempfiles
     temp_docs <- tempfile()
@@ -65,8 +66,8 @@ get_save_files <- function(file_list, dest_dir){
             next
         }
         coltype <- ifelse(specs$char, "c", 
-                        ifelse(specs$num, "d", "i")) %>% paste0(., collapse = "")
-        input_specs <- fwf_positions(specs$colstart, specs$colstop, specs$varname)
+                        ifelse(specs$num, "d", "i")) %>% paste0(., collapse = "") # one character per column for classes
+        input_specs <- fwf_positions(specs$colstart, specs$colstop, specs$varname) # could set na here but there are 3 na values in NAMCS (-9, -8, and -7)
         d <- read_fwf(y, input_specs, col_types = coltype, progress = TRUE)
         f <- paste0(dest_dir, file_list[["datafiles"]][[r]] %>%  tolower %>% gsub("(exe)$", "rds", .))
         saveRDS(d, f)
@@ -78,20 +79,25 @@ namcs_dir <- "./data/" # local directory on computer where data will be saved
 ftp_data <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NAMCS/" # data ftp site
 ftp_docs <- "ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/dataset_documentation/namcs/sas/" # documentation ftp site
 
+# --------------------------------------------------------------------------------------------------
+# extract relevant files for downloading from all files in ftp directory
+# saved working verison of file_list just in case, called "download_specs.rds" so this section can be skipped
+# to skip use: file_list <- readRDS("./data/download_specs.rds")
+
 # download directory information
 fdata <- get_filenames(ftp_data) # get data file names
 fdocs <- get_filenames(ftp_docs) # get sas input specs
 
-# extract relevant file names for downloading
-# NOTE that years have to be organized by row.  Not guaranteed by this code, though it seems to work because they are sorted alphabetically.
+# note that in "file_list" years have to be organized by row.  Order is not guaranteed by this code. It because they are sorted alphabetically.
 # missing "." for col 121 in sas input statement for 1994; skipped above using "if-next"
-# saveRDS(file_list, paste0(namcs_dir, "download_specs.rds")) # saved working verison of file_list just in case
 datafiles <- grep("\\.(exe|EXE)$", fdata$filename, value = TRUE) # limit to those that are for data
 docfiles <- grep("^nam\\d\\dinp\\.txt", fdocs$filename, ignore.case = TRUE, value = TRUE) # limit to those that are for data.  
 file_list <- data.frame(datafiles, docfiles) 
 
-# run download
-get_save_files(file_list, namcs_dir)
+# --------------------------------------------------------------------------------------------------
+# run download and save to local disk
+# note that "UTF-8" seems to work the best.  Unsure of exact formatting.  "US-ASCII" and "ASCII" did not work. Neither did default.
+get_save_files(file_list, namcs_dir, encoding = "UTF-8")
 
 
 
