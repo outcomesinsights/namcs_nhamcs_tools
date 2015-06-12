@@ -61,16 +61,18 @@ get_save_files <- function(file_list, dest_dir, ...){
         curl_download(paste0(ftp_data, file_list[["datafiles"]][[r]]), temp_data)
         y <- unzip(temp_data, exdir = td)
         curl_download(paste0(ftp_docs, file_list[["docfiles"]][[r]]), temp_docs)
-        specs <- read_sas_specs(temp_docs)
+        specs <- read_sas_specs(temp_docs, ...)
         if(any(is.na(specs$width))){
+            cat("Skipped ", file_list[["datafiles"]][[r]], " due to SAS filespec error\n")
             next
         }
         coltype <- ifelse(specs$char, "c", 
                         ifelse(specs$num, "d", "i")) %>% paste0(., collapse = "") # one character per column for classes
         input_specs <- fwf_positions(specs$colstart, specs$colstop, specs$varname) # could set na here but there are 3 na values in NAMCS (-9, -8, and -7)
-        d <- read_fwf(y, input_specs, col_types = coltype, progress = TRUE)
+        d <- read_fwf(y, input_specs, col_types = coltype, progress = FALSE)
         f <- paste0(dest_dir, file_list[["datafiles"]][[r]] %>%  tolower %>% gsub("(exe)$", "rds", .))
         saveRDS(d, f)
+        cat("Saved ", f, "\n")
     }
 }
 
@@ -89,7 +91,7 @@ fdata <- get_filenames(ftp_data) # get data file names
 fdocs <- get_filenames(ftp_docs) # get sas input specs
 
 # note that in "file_list" years have to be organized by row.  Order is not guaranteed by this code. It because they are sorted alphabetically.
-# missing "." for col 121 in sas input statement for 1994; skipped above using "if-next"
+# missing "." in sas input statement for 1993 and 1994; skipped above using "if-next"
 datafiles <- grep("\\.(exe|EXE)$", fdata$filename, value = TRUE) # limit to those that are for data
 docfiles <- grep("^nam\\d\\dinp\\.txt", fdocs$filename, ignore.case = TRUE, value = TRUE) # limit to those that are for data.  
 file_list <- data.frame(datafiles, docfiles) 
