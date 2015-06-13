@@ -13,3 +13,6 @@ The function to read the SAS input statement should work on other files.  I test
 This uses the *[curl](http://cran.r-project.org/web/packages/curl/index.html)* package and not the *[Rcurl](http://cran.r-project.org/web/packages/RCurl/index.html)* package because I wanted to explore it.  Also, *[download.file](https://stat.ethz.ch/R-manual/R-devel/library/utils/html/download.file.html)* and other base R functions would work equally well.
 
 I am using the readr package to read in fixed width files.  It is the best way to do fixed width files.  The [LaF](http://cran.r-project.org/web/packages/LaF/index.html) package also works for fixed width files.  Generally, I prefer *[fread](http://www.inside-r.org/packages/cran/data.table/docs/fread)* in the [data.table](http://cran.r-project.org/web/packages/data.table/index.html) package because it is usually faster to read in large files.  
+
+## About Outcomes Insights, Inc.
+Outcomes Insights is a small, specialized consulting company with expertise in manipulating and analyzing electronic health data.  One of our goals is to provide tools to help other researchers conduct reproducible research more quicky and accurately.  These tools are intended help with those goals.
